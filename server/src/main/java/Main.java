@@ -1,3 +1,4 @@
+import exeption.ClientInterrupt;
 import helpers.*;
 import pythonJavaCommunication.CallPython;
 import serverTools.Server;
@@ -38,6 +39,7 @@ public class Main {
 
     private static void selectLoop() throws IOException, ClassNotFoundException {
         if (selector.selectNow() == 0) return;
+
         Iterator<SelectionKey> keyIterator = selector.selectedKeys().iterator();
 
         while (keyIterator.hasNext()) {
@@ -64,19 +66,21 @@ public class Main {
 
     private static void doRead(SelectionKey key) throws IOException, ClassNotFoundException {
         try {
+            System.out.println("Read0");
             SocketChannel client = (SocketChannel) key.channel();
 
             Request request = getRequest(client);
-            System.out.println(request.voiceCommand().length);
             String data = getTextFromAudio(converToAudioInputStream(request.voiceCommand()));
             Response response = new Response(data); //заглушка
             //Response response = getResponse(request); //исполнение команды
 
             client.register(selector, SelectionKey.OP_WRITE, response);
 
+            System.out.println("Read");
+
             //LOGGER.info("Client (" + client.getRemoteAddress() + ") send request");
         } catch (SocketException e) {
-            //throw new ClientInterrupt((SocketChannel) key.channel());
+            throw new ClientInterrupt((SocketChannel) key.channel());
         }
     }
 
@@ -93,13 +97,13 @@ public class Main {
 
             //LOGGER.info("Server send response to client (" + client.getRemoteAddress() + ")");
         } catch (SocketException e) {
-            //throw new ClientInterrupt((SocketChannel) key.channel());
+            throw new ClientInterrupt((SocketChannel) key.channel());
         }
     }
 
     private static Request getRequest(SocketChannel client) throws IOException, ClassNotFoundException {
         ByteBuffer buffer = ByteBuffer.allocate(500000);
-
+        System.out.println(client.read(buffer));
         if (client.read(buffer) == -1)
             throw new ConnectException("Connection with a client (" + client.getRemoteAddress() + ") was closed");
 
@@ -111,12 +115,10 @@ public class Main {
         WaveDataUtil wd = new WaveDataUtil();
         String fileName = String.format("/%s", ConfigReader.getInstance().getInfoFromConfig("fileName"));
         String filePath = wd.saveToFile(fileName, AudioFileFormat.Type.WAVE, inputStream);
-        System.out.println(filePath);
-        /*CallPython cp = new CallPython();
+        CallPython cp = new CallPython();
         resData = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonCommandAiScript"), new String[]{ConfigReader.getInstance().getInfoFromConfig("model"), filePath});
-
-        return resData;*/
-        return "asdasd";
+        System.out.println(resData);
+        return resData;
     }
 
     private static AudioInputStream converToAudioInputStream(byte[] input){

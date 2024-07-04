@@ -31,7 +31,7 @@ public class Main {
                         Response response = client.readObject();
                         System.out.println(response.textCommand());
                     }
-                } catch (IOException | ClassNotFoundException e) {
+                } catch (IOException | ClassNotFoundException | InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }

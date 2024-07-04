@@ -7,7 +7,7 @@ import javax.sound.sampled.AudioFormat;
 import java.io.IOException;
 
 public class Listener {
-    public byte[] listen() throws IOException {
+    public byte[] listen() throws IOException, InterruptedException {
 
         AudioFormat format = buildAudioFormatInstance();
 
@@ -15,6 +15,8 @@ public class Listener {
         soundRecorder.build(format);
 
         System.out.println("Start recording ....");
+        soundRecorder.start();
+        soundRecorder.getThread().join();
 
         return soundRecorder.getAudioInputStream().readAllBytes();
     }
