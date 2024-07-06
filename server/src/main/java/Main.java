@@ -21,6 +21,7 @@ import serverHelpers.WaveDataUtil;
 
 public class Main {
     private static Selector selector;
+    private final String MODEL = "base";
 
     public static void main(String[] args) throws IOException {
         selector = Selector.open();
@@ -102,7 +103,7 @@ public class Main {
     }
 
     private static Request getRequest(SocketChannel client) throws IOException, ClassNotFoundException {
-        ByteBuffer buffer = ByteBuffer.allocate(500000);
+        ByteBuffer buffer = ByteBuffer.allocate(524288);
         System.out.println(client.read(buffer));
         if (client.read(buffer) == -1)
             throw new ConnectException("Connection with a client (" + client.getRemoteAddress() + ") was closed");
@@ -116,7 +117,7 @@ public class Main {
         String fileName = String.format("/%s", ConfigReader.getInstance().getInfoFromConfig("fileName"));
         String filePath = wd.saveToFile(fileName, AudioFileFormat.Type.WAVE, inputStream);
         CallPython cp = new CallPython();
-        resData = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonCommandAiScript"), new String[]{ConfigReader.getInstance().getInfoFromConfig("model"), filePath});
+        resData = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonCommandAiScript"), new String[]{MODEL, filePath});
         System.out.println(resData);
         return resData;
     }

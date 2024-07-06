@@ -25,7 +25,7 @@ public class Client {
     }
 
     public <T extends Serializable> T readObject() throws IOException, ClassNotFoundException {
-        ByteBuffer buffer = ByteBuffer.allocate(500000);
+        ByteBuffer buffer = ByteBuffer.allocate(524288);
 
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 
