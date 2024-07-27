@@ -3,6 +3,7 @@ package toolsForServer;
 import helpers.Serializer;
 
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetSocketAddress;
@@ -25,26 +26,35 @@ public class Client {
     }
 
     public <T extends Serializable> T readObject() throws IOException, ClassNotFoundException {
-        ByteBuffer buffer = ByteBuffer.allocate(524288);
-
+        ByteBuffer buffer = ByteBuffer.allocate(8192); // Уменьшенный буфер для чтения произвольной длины данных
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 
-        while (this.channel.read(buffer) != -1) {
+        int bytesRead;
+        while ((bytesRead = this.channel.read(buffer)) != -1) {
+            //buffer.flip(); // Переключение буфера в режим чтения
+            byteOut.write(buffer.array(), 0, buffer.limit()); // Запись данных из буфера в ByteArrayOutputStream
+            buffer.clear(); // Очистка буфера для следующего чтения
 
-            //buffer.flip(); //хз зачем нужно было, без него работает, с ним нет
-            byteOut.write(buffer.array(), 0, buffer.limit());
-            buffer.clear();
-
-            byte lastByte = byteOut.toByteArray()[byteOut.size() - 1];
-            if (lastByte == 1 || lastByte == 0) break;
-
+            byte[] byteArray = byteOut.toByteArray();
+            if (byteArray.length > 0) {
+                byte lastByte = byteArray[byteArray.length - 1];
+                if (lastByte == 1 || lastByte == 0) {
+                    break;
+                }
+            }
         }
 
         return Serializer.deserialize(byteOut.toByteArray());
     }
 
+
     public <T extends Serializable> void writeObject(T obj) throws IOException {
-        this.channel.write(ByteBuffer.wrap(Serializer.serialize(obj)));
+        byte[] serializedData = Serializer.serialize(obj);
+        ByteBuffer buffer = ByteBuffer.wrap(serializedData);
+        while (buffer.hasRemaining()) {
+            this.channel.write(buffer);
+            System.out.println(buffer.array().length);
+        }
     }
 
     public Integer getPort() {

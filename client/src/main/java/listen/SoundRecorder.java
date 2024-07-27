@@ -1,15 +1,14 @@
 package listen;
 
+import helpers.AudioFormatInstanceBuilder;
+import helpers.ConfigReader;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.TargetDataLine;
+import javax.sound.sampled.*;
 
 public class SoundRecorder implements Runnable {
     private AudioInputStream audioInputStream;
@@ -27,7 +26,7 @@ public class SoundRecorder implements Runnable {
     short[] shorts;
     long startSilence = 0;
     boolean stopRecording = false;
-    private final double RMS = 0.007; //можно менять, если понадобится, влияет на чувствительность микрофона
+    private final double RMS = 0.001; //можно менять, если понадобится, влияет на чувствительность микрофона 0.007
 
     public SoundRecorder() {
         super();
@@ -55,7 +54,7 @@ public class SoundRecorder implements Runnable {
     public void run() {
         duration = 0;
 
-        try (final ByteArrayOutputStream out = new ByteArrayOutputStream(); final TargetDataLine line = getTargetDataLineForRecord();) {
+        try (final ByteArrayOutputStream out = new ByteArrayOutputStream(); final TargetDataLine line = getTargetDataLineForRecord()) {
             int frameSizeInBytes = format.getFrameSize();
             int bufferLengthInFrames = line.getBufferSize() / 8;
             final int bufferLengthInBytes = bufferLengthInFrames * frameSizeInBytes;
@@ -133,18 +132,37 @@ public class SoundRecorder implements Runnable {
         return audioStream;
     }
 
-    public TargetDataLine getTargetDataLineForRecord() {
-        TargetDataLine line;
-        DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
-        if (!AudioSystem.isLineSupported(info)) {
-            return null;
+    public TargetDataLine getTargetDataLineForRecord() throws LineUnavailableException {
+        Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
+        String micro = ConfigReader.getInstance().getInfoFromConfig("microphoneName");
+        TargetDataLine line = null;
+
+        for (Mixer.Info info : mixerInfos) {
+            Mixer mixer = AudioSystem.getMixer(info);
+            DataLine.Info dataLineinfo = new DataLine.Info(TargetDataLine.class, format);
+            if (info.getName().contains(micro)) {  //try to get micro from config
+                if (mixer.isLineSupported(dataLineinfo)) {
+                    line = (TargetDataLine) mixer.getLine(dataLineinfo);
+                    System.out.printf("%s is now set as the input device.\n", micro);
+                    break;
+                } else {
+                    System.out.printf("The specified audio format is not supported by %s.\n", micro);
+                }
+            }
+            else { //if java cant get micro, get another one
+                dataLineinfo = new DataLine.Info(TargetDataLine.class, format);
+                if (!AudioSystem.isLineSupported(dataLineinfo)) {
+                    return null;
+                }
+                try {
+                    line = (TargetDataLine) AudioSystem.getLine(dataLineinfo);
+                    break;
+                } catch (final Exception ex) {
+                    return null;
+                }
+            }
         }
-        try {
-            line = (TargetDataLine) AudioSystem.getLine(info);
-            line.open(format, line.getBufferSize());
-        } catch (final Exception ex) {
-            return null;
-        }
+        line.open(format, line.getBufferSize());
         return line;
     }
 

@@ -1,8 +1,7 @@
 package helpers;
 
-import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.*;
 import java.io.IOException;
-import java.util.Properties;
 
 public class AudioFormatInstanceBuilder {
     private final AudioFormat audioFormat;
@@ -11,12 +10,12 @@ public class AudioFormatInstanceBuilder {
     static {
         try {
             INSTANCE = new AudioFormatInstanceBuilder();
-        } catch (IOException e) {
+        } catch (IOException | LineUnavailableException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private AudioFormatInstanceBuilder() throws IOException {
+    private AudioFormatInstanceBuilder() throws IOException, LineUnavailableException {
         AudioFormatProperties aConstants = new AudioFormatProperties();
         AudioFormat.Encoding encoding = aConstants.ENCODING;
         float rate = aConstants.RATE;
@@ -24,8 +23,13 @@ public class AudioFormatInstanceBuilder {
         int sampleSize = aConstants.SAMPLE_SIZE;
         boolean bigEndian = aConstants.BIG_ENDIAN;
         audioFormat = new AudioFormat(encoding, rate, sampleSize, channels, (sampleSize / 8) * channels, rate, bigEndian);
+        DataLine.Info info1 = new DataLine.Info(TargetDataLine.class,
+                audioFormat); // format is an AudioFormat object
+        TargetDataLine line1 = (TargetDataLine) AudioSystem.getLine(info1);
+        System.out.println(line1);
 
     }
+    //com.sun.media.sound.PortMixer$PortMixerPort@3e289415
 
     public static AudioFormatInstanceBuilder getInstance(){
         return INSTANCE;

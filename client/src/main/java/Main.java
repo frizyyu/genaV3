@@ -2,11 +2,6 @@ import helpers.*;
 import listen.*;
 import pythonJavaCommunication.CallPython;
 import toolsForServer.Client;
-
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 
@@ -25,10 +20,10 @@ public class Main {
                     if (cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonAliasAiScript"), new String[]{ConfigReader.getInstance().getInfoFromConfig("microphoneId"), ConfigReader.getInstance().getInfoFromConfig("aliasAIToken")}).equals("Hear")) {
                         byte[] userCommand = listener.listen();
                         //результат listen нужно передавать на сервер для расшифровки
-                        System.out.println(userCommand.length);
                         client.writeObject(new Request(userCommand));
 
                         Response response = client.readObject();
+                        System.out.println("ASDASD");
                         System.out.println(response.textCommand());
                     }
                 } catch (IOException | ClassNotFoundException | InterruptedException e) {

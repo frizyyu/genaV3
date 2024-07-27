@@ -4,6 +4,7 @@ import pythonJavaCommunication.CallPython;
 import serverTools.Server;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketException;
@@ -12,6 +13,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 import java.util.Iterator;
 
 import javax.sound.sampled.AudioFileFormat;
@@ -21,7 +23,7 @@ import serverHelpers.WaveDataUtil;
 
 public class Main {
     private static Selector selector;
-    private final String MODEL = "base";
+    private static final String MODEL = "base";
 
     public static void main(String[] args) throws IOException {
         selector = Selector.open();
@@ -103,12 +105,26 @@ public class Main {
     }
 
     private static Request getRequest(SocketChannel client) throws IOException, ClassNotFoundException {
-        ByteBuffer buffer = ByteBuffer.allocate(524288);
-        System.out.println(client.read(buffer));
-        if (client.read(buffer) == -1)
-            throw new ConnectException("Connection with a client (" + client.getRemoteAddress() + ") was closed");
+        ByteBuffer buffer = ByteBuffer.allocate(8192); // Меньший буфер для многократного чтения
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        int bytesRead;
 
-        return Serializer.deserialize(buffer.array());
+        while ((bytesRead = client.read(buffer)) > 0) {
+            buffer.flip();
+            byteArrayOutputStream.write(buffer.array(), 0, bytesRead);
+            buffer.clear();
+        }
+
+        if (bytesRead == -1) {
+            throw new ConnectException("Connection with a client (" + client.getRemoteAddress() + ") was closed");
+        }
+
+        byte[] data = byteArrayOutputStream.toByteArray();
+
+        System.out.println("Total data length: " + data.length);
+        System.out.println("Total data content: " + Arrays.toString(data));
+
+        return Serializer.deserialize(data);
     }
 
     private static String getTextFromAudio(AudioInputStream inputStream) throws IOException {
