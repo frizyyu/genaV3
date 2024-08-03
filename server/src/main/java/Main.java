@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 
 import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import serverHelpers.WaveDataUtil;
 
@@ -74,8 +73,8 @@ public class Main {
 
             Request request = getRequest(client);
             String data = getTextFromAudio(converToAudioInputStream(request.voiceCommand()));
-            Response response = new Response(data); //заглушка
-            //Response response = getResponse(request); //исполнение команды
+            //Response response = new Response(data); //заглушка
+            Response response = getResponse(data); //исполнение команды
 
             client.register(selector, SelectionKey.OP_WRITE, response);
 
@@ -121,9 +120,6 @@ public class Main {
 
         byte[] data = byteArrayOutputStream.toByteArray();
 
-        System.out.println("Total data length: " + data.length);
-        System.out.println("Total data content: " + Arrays.toString(data));
-
         return Serializer.deserialize(data);
     }
 
@@ -134,7 +130,6 @@ public class Main {
         String filePath = wd.saveToFile(fileName, AudioFileFormat.Type.WAVE, inputStream);
         CallPython cp = new CallPython();
         resData = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonCommandAiScript"), new String[]{MODEL, filePath});
-        System.out.println(resData);
         return resData;
     }
 
@@ -147,8 +142,12 @@ public class Main {
         return stream;
     }
 
-    /*private static Response getResponse(Request request) {
-        ServerCommand command = (ServerCommand) commandManager.getCommandList().get(request.command());
-        return command.serverExecute(request.arguments(), request.routeReader());
-    }*/
+    private static Response getResponse(String textCommand) throws IOException { //method for getting command from list with input user command, allows for variability of commands
+        CallPython cp = new CallPython();
+        System.out.println(textCommand);
+        String pathToVectorizer = ConfigReader.getInstance().getInfoFromConfig("pathToVectorizer");
+        String pathToKnnModel = ConfigReader.getInstance().getInfoFromConfig("pathToKnnModel");
+        String res = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonChooseCommand"), new String[]{pathToVectorizer, pathToKnnModel, textCommand});
+        return new Response(res);
+    }
 }
