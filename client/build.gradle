@@ -13,7 +13,7 @@ dependencies {
     implementation(project(":common"))
     testImplementation platform('org.junit:junit-bom:5.9.1')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    //implementation 'org.python:jython-standalone:2.7.2' отказ от jython, тк поддерживает версии питона до 2.7, а нужны 3.х
+    implementation 'com.alphacephei:vosk:0.3.38'
 }
 
 test {

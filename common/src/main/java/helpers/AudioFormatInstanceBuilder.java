@@ -23,10 +23,6 @@ public class AudioFormatInstanceBuilder {
         int sampleSize = aConstants.SAMPLE_SIZE;
         boolean bigEndian = aConstants.BIG_ENDIAN;
         audioFormat = new AudioFormat(encoding, rate, sampleSize, channels, (sampleSize / 8) * channels, rate, bigEndian);
-        DataLine.Info info1 = new DataLine.Info(TargetDataLine.class,
-                audioFormat); // format is an AudioFormat object
-        TargetDataLine line1 = (TargetDataLine) AudioSystem.getLine(info1);
-        System.out.println(line1);
 
     }
     //com.sun.media.sound.PortMixer$PortMixerPort@3e289415

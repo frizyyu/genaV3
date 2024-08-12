@@ -1,10 +1,21 @@
 package commands;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 public class CommandFactory {
-    private static final HashMap<String, ?> commandMap = new HashMap<>();
-    static {
-        commandMap.put("команда", null); //так для каждого, вместо нул придумать, чё пихнуть можно
+    private final LinkedHashMap<String, Command> commandMap;
+    public CommandFactory() {
+        commandMap = new LinkedHashMap<>();
+    }
+    public void setCommandMap(ArrayList<Command> commands){
+        commands.forEach(command -> commandMap.put(command.getName(), command));
+    }
+    public void executeCommand(String command, String[] args){
+        try {
+            commandMap.get(command).execute(args);
+        } catch (NullPointerException e){
+            System.out.println("Неизвестная команда");
+        }
     }
 }

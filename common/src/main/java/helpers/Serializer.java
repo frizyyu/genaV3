@@ -15,7 +15,6 @@ public class Serializer {
     @SuppressWarnings("unchecked")
     public static <T extends Serializable> T deserialize(byte[] arr) throws IOException, ClassNotFoundException, ClassCastException {
         ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(arr));
-        System.out.println(arr.length);
         return (T) in.readObject();
     }
 }

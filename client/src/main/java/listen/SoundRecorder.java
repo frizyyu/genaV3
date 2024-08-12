@@ -18,7 +18,7 @@ public class SoundRecorder implements Runnable {
     byte[] data;
     int numBytesRead;
     int counterBeforeStop = 0;
-    private final int WAITBEFORESTOP = 20; //можно менять для обрезания хвоста после замолкания
+    private final int WAITBEFORESTOP = 5; //можно менять для обрезания хвоста после замолкания
 
     //для проверки на тишину
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -54,7 +54,7 @@ public class SoundRecorder implements Runnable {
     public void run() {
         duration = 0;
 
-        try (final ByteArrayOutputStream out = new ByteArrayOutputStream(); final TargetDataLine line = getTargetDataLineForRecord()) {
+        try (final ByteArrayOutputStream out = new ByteArrayOutputStream(); final TargetDataLine line = getTargetDataLineForRecord(format)) {
             int frameSizeInBytes = format.getFrameSize();
             int bufferLengthInFrames = line.getBufferSize() / 8;
             final int bufferLengthInBytes = bufferLengthInFrames * frameSizeInBytes;
@@ -132,7 +132,7 @@ public class SoundRecorder implements Runnable {
         return audioStream;
     }
 
-    public TargetDataLine getTargetDataLineForRecord() throws LineUnavailableException {
+    public TargetDataLine getTargetDataLineForRecord(AudioFormat format) throws LineUnavailableException {
         Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
         String micro = ConfigReader.getInstance().getInfoFromConfig("microphoneName");
         TargetDataLine line = null;

@@ -1,33 +1,28 @@
-import exeption.ClientInterrupt;
 import helpers.*;
 import pythonJavaCommunication.CallPython;
+import serverHelpers.WaveDataUtil;
 import serverTools.Server;
 
+import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioInputStream;
-import serverHelpers.WaveDataUtil;
-
 public class Main {
     private static Selector selector;
-    private static final String MODEL = "base";
 
     public static void main(String[] args) throws IOException {
         selector = Selector.open();
         Server server = new Server(Integer.parseInt(ConfigReader.getInstance().getInfoFromConfig("port")));
         server.register(selector, SelectionKey.OP_ACCEPT);
+
         System.out.println("Server started");
         while (true) {
             try {
@@ -47,9 +42,19 @@ public class Main {
         while (keyIterator.hasNext()) {
             SelectionKey key = keyIterator.next();
 
-            if (key.isAcceptable()) doAccept(key);
-            if (key.isReadable()) doRead(key);
-            if (key.isWritable()) doWrite(key);
+            if (!key.isValid()) {
+                keyIterator.remove();
+                continue;
+            }
+
+            try {
+                if (key.isAcceptable()) doAccept(key);
+                if (key.isReadable()) doRead(key);
+                if (key.isWritable()) doWrite(key);
+            } catch (CancelledKeyException e) {
+                keyIterator.remove();
+                continue;
+            }
 
             keyIterator.remove();
         }
@@ -68,21 +73,21 @@ public class Main {
 
     private static void doRead(SelectionKey key) throws IOException, ClassNotFoundException {
         try {
-            System.out.println("Read0");
             SocketChannel client = (SocketChannel) key.channel();
 
             Request request = getRequest(client);
-            String data = getTextFromAudio(converToAudioInputStream(request.voiceCommand()));
-            //Response response = new Response(data); //заглушка
-            Response response = getResponse(data); //исполнение команды
+            if (request != null) {
+                String data = getTextFromAudio(converToAudioInputStream(request.voiceCommand()));
+                Response response = getResponse(data); //исполнение команды
 
-            client.register(selector, SelectionKey.OP_WRITE, response);
+                client.register(selector, SelectionKey.OP_WRITE, response);
 
-            System.out.println("Read");
+                System.out.println("Read");
+            }
 
             //LOGGER.info("Client (" + client.getRemoteAddress() + ") send request");
         } catch (SocketException e) {
-            throw new ClientInterrupt((SocketChannel) key.channel());
+            clientInterrupt(key);
         }
     }
 
@@ -99,8 +104,16 @@ public class Main {
 
             //LOGGER.info("Server send response to client (" + client.getRemoteAddress() + ")");
         } catch (SocketException e) {
-            throw new ClientInterrupt((SocketChannel) key.channel());
+            clientInterrupt(key);
         }
+    }
+
+    private static void clientInterrupt(SelectionKey key) throws IOException {
+        SocketChannel client = (SocketChannel) key.channel();
+        System.out.println("Client (" + client.getRemoteAddress() + ") interrupted. Closing connection.");
+
+        key.cancel();
+        client.close();
     }
 
     private static Request getRequest(SocketChannel client) throws IOException, ClassNotFoundException {
@@ -129,7 +142,7 @@ public class Main {
         String fileName = String.format("/%s", ConfigReader.getInstance().getInfoFromConfig("fileName"));
         String filePath = wd.saveToFile(fileName, AudioFileFormat.Type.WAVE, inputStream);
         CallPython cp = new CallPython();
-        resData = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonCommandAiScript"), new String[]{MODEL, filePath});
+        resData = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonCommandAiScript"), new String[]{ConfigReader.getInstance().getInfoFromConfig("voskModelRuPath"), ConfigReader.getInstance().getInfoFromConfig("voskModelEnPath"), filePath});
         return resData;
     }
 
@@ -147,7 +160,7 @@ public class Main {
         System.out.println(textCommand);
         String pathToVectorizer = ConfigReader.getInstance().getInfoFromConfig("pathToVectorizer");
         String pathToKnnModel = ConfigReader.getInstance().getInfoFromConfig("pathToKnnModel");
-        String res = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonChooseCommand"), new String[]{pathToVectorizer, pathToKnnModel, textCommand});
-        return new Response(res);
+        String[] res = cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonChooseCommand"), new String[]{pathToVectorizer, pathToKnnModel, textCommand}).split("\\|");
+        return new Response(res[0], res[1].replace("[", "").replace("]", "").split(", "));
     }
 }

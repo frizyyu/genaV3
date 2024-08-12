@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -15,14 +16,20 @@ import java.nio.channels.SocketChannel;
 public class Client {
     private final String address;
     private final Integer port;
-    private final SocketChannel channel;
+    private final int DELAY = 5000;
+    private SocketChannel channel;
 
     public Client(String address, Integer port) throws IOException {
         this.address = address;
         this.port = port;
+        connect();
+    }
 
+    private void connect() throws IOException {
         this.channel = SocketChannel.open();
-        this.channel.connect(new InetSocketAddress(address, port));
+        try {
+            this.channel.connect(new InetSocketAddress(address, port));
+        } catch (ConnectException ignored){}
     }
 
     public <T extends Serializable> T readObject() throws IOException, ClassNotFoundException {
@@ -53,7 +60,15 @@ public class Client {
         ByteBuffer buffer = ByteBuffer.wrap(serializedData);
         while (buffer.hasRemaining()) {
             this.channel.write(buffer);
-            System.out.println(buffer.array().length);
+        }
+    }
+
+    public boolean isConnected() {
+        try {
+            writeObject(null);
+            return true;
+        } catch (IOException e){
+            return false;
         }
     }
 
