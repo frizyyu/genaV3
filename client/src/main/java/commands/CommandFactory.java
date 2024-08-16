@@ -11,11 +11,14 @@ public class CommandFactory {
     public void setCommandMap(ArrayList<Command> commands){
         commands.forEach(command -> commandMap.put(command.getName(), command));
     }
-    public void executeCommand(String command, String[] args){
+    public String executeCommand(String commandName, String[] args){
         try {
-            commandMap.get(command).execute(args);
+            Command command = commandMap.get(commandName);
+            command.execute(args);
+            return command.getOutput();
         } catch (NullPointerException e){
-            System.out.println("Неизвестная команда");
+            //воспроизведение аудио с предзаписанным текстом, вдруг не будет интернета, либо нет
+            return "Неизвестная команда";
         }
     }
 }

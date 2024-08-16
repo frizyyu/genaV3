@@ -1,3 +1,4 @@
+import TextToSpeech.Speecher;
 import commands.CommandFactory;
 import commands.SayTime;
 import helpers.*;
@@ -19,6 +20,7 @@ public class Main {
         AtomicReference<Client> client = new AtomicReference<>(new Client(ConfigReader.getInstance().getInfoFromConfig("serverAddress"), Integer.parseInt(ConfigReader.getInstance().getInfoFromConfig("serverPort"))));
 
         Listener listener = new Listener();
+        Speecher speecher = new Speecher();
         CommandFactory COMMANDFACTORY = new CommandFactory();
         COMMANDFACTORY.setCommandMap(new ArrayList<>(List.of(
                 new SayTime("say_time", new String[]{"time difference"}, "Скажу вам время")
@@ -31,6 +33,7 @@ public class Main {
                 try {
                     al.openMicro();
                     if (al.hear()) {
+                        speecher.stop(); //проверить работоспособность
                         al.closeMicro();
                     //if (cp.call(ConfigReader.getInstance().getInfoFromConfig("pythonAliasAiModel"), new String[]{ConfigReader.getInstance().getInfoFromConfig("microphoneId")}).equals("Hear")) {
                         if (!client.get().isConnected()){
@@ -39,12 +42,18 @@ public class Main {
 
                         if (client.get().isConnected()) {
                             try {
+                                Response response;
                                 byte[] userCommand = listener.listen();
                                 //результат listen нужно передавать на сервер для расшифровки
-                                client.get().writeObject(new Request(userCommand));
+                                client.get().writeObject(new Request(userCommand, null));
 
-                                Response response = client.get().readObject();
-                                COMMANDFACTORY.executeCommand(response.textCommand(), response.args());
+                                response = client.get().readObject();
+                                String textForTts = COMMANDFACTORY.executeCommand(response.textCommand(), response.args());
+
+                                client.get().writeObject(new Request(null, textForTts));
+                                response = client.get().readObject();
+                                System.out.println(Arrays.toString(response.audioOutput()));
+                                speecher.say(speecher.saveToWav(response.audioOutput()));
                                 //System.out.println(response.textCommand());
                             } catch (IOException e){
                                 System.out.println("Нет дступа к серверу");

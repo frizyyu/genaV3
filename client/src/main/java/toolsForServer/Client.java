@@ -33,6 +33,7 @@ public class Client {
     }
 
     public <T extends Serializable> T readObject() throws IOException, ClassNotFoundException {
+        System.out.println("QWEQWEQWE");
         ByteBuffer buffer = ByteBuffer.allocate(8192); // Уменьшенный буфер для чтения произвольной длины данных
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 
