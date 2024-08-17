@@ -52,10 +52,9 @@ public class Main {
 
                                 client.get().writeObject(new Request(null, textForTts));
                                 response = client.get().readObject();
-                                System.out.println(Arrays.toString(response.audioOutput()));
-                                speecher.say(speecher.saveToWav(response.audioOutput()));
-                                //System.out.println(response.textCommand());
+                                speecher.say(speecher.byteToStream(response.audioOutput()));
                             } catch (IOException e){
+                                e.printStackTrace();
                                 System.out.println("Нет дступа к серверу");
                                 client.set(new Client(ConfigReader.getInstance().getInfoFromConfig("serverAddress"), Integer.parseInt(ConfigReader.getInstance().getInfoFromConfig("serverPort"))));
                             }

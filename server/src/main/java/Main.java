@@ -97,6 +97,7 @@ public class Main {
                     data = request.textForTTS();
                     byte[] res = tts(data);
                     response = getResponse(null, res);
+                    //response = new Response("jshsshhs", new String[]{"asdads", "www"}, null);
                 }
                 System.out.println(response);
                 client.register(selector, SelectionKey.OP_WRITE, response);
@@ -111,21 +112,39 @@ public class Main {
     }
 
     private static void doWrite(SelectionKey key) throws IOException {
-
+        SocketChannel client = (SocketChannel) key.channel();
         try {
-            SocketChannel client = (SocketChannel) key.channel();
             Response response = (Response) key.attachment();
+            byte[] serializedData = Serializer.serialize(response);
 
-            client.write(ByteBuffer.wrap(Serializer.serialize(response)));
+            ByteBuffer buffer = ByteBuffer.allocate(4 + serializedData.length);
+
+            // пишем длину сообщения
+            buffer.putInt(serializedData.length);
+            System.out.println(serializedData.length);
+
+            // пишем данные
+            buffer.put(serializedData);
+
+            buffer.flip();
+
+            // Отправляем клиенту
+            while (buffer.hasRemaining()) {
+                client.write(buffer);
+            }
 
             client.register(selector, SelectionKey.OP_READ);
             System.out.println("Write");
 
-            //LOGGER.info("Server send response to client (" + client.getRemoteAddress() + ")");
         } catch (SocketException e) {
             clientInterrupt(key);
         }
     }
+
+
+
+
+
 
     private static void clientInterrupt(SelectionKey key) throws IOException {
         SocketChannel client = (SocketChannel) key.channel();
@@ -192,7 +211,6 @@ public class Main {
     private static String[] getCommandFromPython(String textCommand) throws IOException {
         System.out.println(textCommand);
         String[] res = cp.call(String.format("get_command|%s", textCommand)).split("\\|");
-        System.out.println(Arrays.toString(res));
         return res;
     }
 

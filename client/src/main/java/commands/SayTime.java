@@ -8,7 +8,7 @@ public class SayTime extends Command{
 
     @Override
     public void execute(String[] args) {
-        output = "сейчас 12:42";
+        output = "тут будет время, например, сейчас 12:42";
     }
 
     @Override

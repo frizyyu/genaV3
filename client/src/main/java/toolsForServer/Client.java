@@ -1,5 +1,7 @@
 package toolsForServer;
 
+import helpers.Request;
+import helpers.Response;
 import helpers.Serializer;
 
 import java.io.ByteArrayOutputStream;
@@ -12,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Arrays;
 
 public class Client {
     private final String address;
@@ -32,28 +35,47 @@ public class Client {
         } catch (ConnectException ignored){}
     }
 
-    public <T extends Serializable> T readObject() throws IOException, ClassNotFoundException {
-        System.out.println("QWEQWEQWE");
-        ByteBuffer buffer = ByteBuffer.allocate(8192); // Уменьшенный буфер для чтения произвольной длины данных
+    public <T extends Serializable> T readObject() throws IOException, ClassNotFoundException, InterruptedException {
+        //работает только такой вариант
+        //сначала получаем длину данных, которые сервер хочет отправить, а потом уже принимаем их
+        ByteBuffer lengthBuffer = ByteBuffer.allocate(4);
+
+        // Чтение длины сообщения
+        while (lengthBuffer.hasRemaining()) {
+            if (this.channel.read(lengthBuffer) == -1) {
+                throw new IOException("Connection closed before length was read.");
+            }
+        }
+        lengthBuffer.flip();
+        int messageLength = lengthBuffer.getInt();
+
+        ByteBuffer buffer = ByteBuffer.allocate(8192);
         ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 
+        int remainingBytes = messageLength;
         int bytesRead;
-        while ((bytesRead = this.channel.read(buffer)) != -1) {
-            //buffer.flip(); // Переключение буфера в режим чтения
-            byteOut.write(buffer.array(), 0, buffer.limit()); // Запись данных из буфера в ByteArrayOutputStream
-            buffer.clear(); // Очистка буфера для следующего чтения
-
-            byte[] byteArray = byteOut.toByteArray();
-            if (byteArray.length > 0) {
-                byte lastByte = byteArray[byteArray.length - 1];
-                if (lastByte == 1 || lastByte == 0) {
-                    break;
-                }
+        while (remainingBytes > 0 && (bytesRead = this.channel.read(buffer)) != -1) {
+            if (bytesRead > 0) {
+                buffer.flip();
+                byteOut.write(buffer.array(), 0, bytesRead);
+                remainingBytes -= bytesRead;
+                buffer.clear();
             }
         }
 
-        return Serializer.deserialize(byteOut.toByteArray());
+        if (remainingBytes > 0) {
+            throw new IOException("Incomplete data received.");
+        }
+
+        byte[] data = byteOut.toByteArray();
+        System.out.println("Size of received data: " + data.length);
+        return Serializer.deserialize(data);
     }
+
+
+
+
+
 
 
     public <T extends Serializable> void writeObject(T obj) throws IOException {
